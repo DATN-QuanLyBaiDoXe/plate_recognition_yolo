@@ -10,3 +10,8 @@ requests
 pandas
 seaborn
 ipython
+
+
+requests
+pymongo
+kafka-python
