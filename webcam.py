@@ -8,6 +8,12 @@ import os
 import time
 import argparse
 import function.helper as helper
+import json
+from bson import json_util
+import datetime
+from kafka import KafkaProducer
+import Event
+from datetime import datetime
 
 # load model
 yolo_LP_detect = torch.hub.load('yolov5', 'custom', path='model/LP_detector_nano_61.pt', force_reload=True, source='local')
@@ -17,7 +23,8 @@ yolo_license_plate.conf = 0.60
 prev_frame_time = 0
 new_frame_time = 0
 
-vid = cv2.VideoCapture(1)
+producer = KafkaProducer(bootstrap_servers='localhost:9092')
+vid = cv2.VideoCapture(0)
 # vid = cv2.VideoCapture("1.mp4")
 while(True):
     ret, frame = vid.read()
@@ -50,8 +57,18 @@ while(True):
     fps = 1/(new_frame_time-prev_frame_time)
     prev_frame_time = new_frame_time
     fps = int(fps)
+    print("aaaaaaaaaaa: ", list_read_plates)
     cv2.putText(frame, str(fps), (7, 70), cv2.FONT_HERSHEY_SIMPLEX, 3, (100, 255, 0), 3, cv2.LINE_AA)
     cv2.imshow('frame', frame)
+    
+    if(list_read_plates != set()):
+        image_name = datetime.today().strftime('%Y%m%d_%H%M%S')
+        cv2.imwrite("./result/" + image_name + ".jpg", frame)
+        created_date = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
+        data = Event.Event(list(list_read_plates)[0], image_name, created_date).__dict__
+        producer.send('event-request-topic', json.dumps(data).encode("utf-8"))
+        producer.flush()    
+ 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
