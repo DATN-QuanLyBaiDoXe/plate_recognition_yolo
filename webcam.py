@@ -25,7 +25,7 @@ new_frame_time = 0
 
 producer = KafkaProducer(bootstrap_servers='localhost:9092')
 vid = cv2.VideoCapture(0)
-# vid = cv2.VideoCapture("1.mp4")
+# vid = cv2.VideoCapture("video.gif")
 while(True):
     ret, frame = vid.read()
     
@@ -65,7 +65,7 @@ while(True):
         image_name = datetime.today().strftime('%Y%m%d_%H%M%S')
         cv2.imwrite("./result/" + image_name + ".jpg", frame)
         created_date = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
-        data = Event.Event(list(list_read_plates)[0], image_name, created_date).__dict__
+        data = Event.Event(list(list_read_plates)[0], image_name + ".jpg", created_date).__dict__
         producer.send('event-request-topic', json.dumps(data).encode("utf-8"))
         producer.flush()    
  
