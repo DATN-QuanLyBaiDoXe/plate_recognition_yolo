@@ -15,6 +15,9 @@ from kafka import KafkaProducer
 import Event
 from datetime import datetime
 
+import requests
+import json
+
 # load model
 yolo_LP_detect = torch.hub.load('yolov5', 'custom', path='model/LP_detector_nano_61.pt', force_reload=True, source='local')
 yolo_license_plate = torch.hub.load('yolov5', 'custom', path='model/LP_ocr_nano_62.pt', force_reload=True, source='local')
@@ -24,8 +27,8 @@ prev_frame_time = 0
 new_frame_time = 0
 
 producer = KafkaProducer(bootstrap_servers='localhost:9092')
-vid = cv2.VideoCapture(0)
-# vid = cv2.VideoCapture("video.gif")
+# vid = cv2.VideoCapture(0)
+vid = cv2.VideoCapture("video.gif")
 while(True):
     ret, frame = vid.read()
     
@@ -65,7 +68,28 @@ while(True):
         image_name = datetime.today().strftime('%Y%m%d_%H%M%S')
         cv2.imwrite("./result/" + image_name + ".jpg", frame)
         created_date = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
-        data = Event.Event(list(list_read_plates)[0], image_name + ".jpg", created_date).__dict__
+        # upload image
+        url = "http://103.21.151.166:8683/v1.0/upload/file"
+
+        payload={}
+        files=[
+        ('file',('crop.jpg',open("./result/" + image_name + ".jpg",'rb'),'image/png'))
+        ]
+        headers = {
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'vi-VN,vi;q=0.9,fr-FR;q=0.8,fr;q=0.7,en-US;q=0.6,en;q=0.5',
+        'Authorization': 'Bearer '
+        }
+
+        response = requests.request("POST", url, headers=headers, data=payload, files=files)
+
+        print(response.text)
+        response = json.loads(response.text)
+        image_name = ''
+        for employee in response["data"]: 
+            image_name = employee["fileDownloadUri"]
+        
+        data = Event.Event(list(list_read_plates)[0], image_name, created_date).__dict__
         producer.send('event-request-topic', json.dumps(data).encode("utf-8"))
         producer.flush()    
  
